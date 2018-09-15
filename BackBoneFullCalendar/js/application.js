@@ -11,14 +11,14 @@ $(function () {
             _.bindAll(this, _.functions(this));
             this.collection.bind('reset', this.addAll);
             this.collection.bind('add', this.addOne);
-            this.collection.bind('change', this.change);            
+            this.collection.bind('change', this.change);
             this.collection.bind('destroy', this.destroy);
 
             this.eventView = new EventView();
         },
         render: function () {
             
-            return this.$el.fullCalendar({
+             this.$el.fullCalendar({
                 header: {
                     left: 'prev,next today',
                     center: 'title',
@@ -43,11 +43,13 @@ $(function () {
             this.el.fullCalendar('renderEvent', event.toJSON);
         },
         select: function (startDate, endDate) {
+            debugger;
             this.eventView.collection = this.collection;
             this.eventView.model = new Event({ start: startDate, end: endDate });
             new EventView().render();
         },
         eventClick: function (fcEvent) {
+           
             this.eventView.model = this.collection.get(fcEvent.id);
             this.eventView.render();
         },
@@ -66,27 +68,55 @@ $(function () {
         }
     });
 
+
+    var EventView = Backbone.View.extend({
+        el: $('#eventDialog'),
+        initialize: function () {
+            _.bindAll(this, _.functions(this));
+        },
+        render: function () {
+            var buttons = { 'Ok': this.save };
+            if (!this.model.isNew()) {
+                _.extend(buttons, { 'Delete': this.destroy });
+            }
+            _.extend(buttons, { 'Cancel': this.close });
+
+            this.el.dialog({
+                model: true,
+                title: (this.model.isNew() ? 'New' : 'Edit') + ' Event',
+                buttons: buttons,
+                open: this.open
+            });
+            return this;
+        },
+        open: function () {
+            this.$('#title').val(this.model.get('title'));
+            this.$('#color').val(this.model.get('color'));
+
+        },
+        save: function () {
+            this.model.set({ 'title': this.$('#title').val(), 'color': this.$('#color').val() });
+        
+            if (this.model.isNew()) {
+                this.collection.create(this.model, { success: this.close });
+            }
+            else {
+                this.model.save({}, { success: this.close });
+            }
+        },
+        close: function () {
+            this.el.dialog('close');
+        },
+        destroy: function () {
+            this.model.destroy({ success: this.close });
+        }
+    });
+
+
+
     var events = new Events();
     new EventsView({ el: $("#calendar"), collection: events }).render();
     events.fetch();
 
 	
-});
-
-var EventView = Backbone.View.extend({
-    el: $('#eventDialog'),
-    initialize: function () {
-        _.bindAll(this, _.functions(this));
-    },
-    render: function () {
-        this.el.dialog({
-            model: true,
-            title: 'New Event',
-            buttons: { 'Cancel': this.close }
-        });
-        return this;
-    },
-    close: function () {
-        this.el.dialog('close');
-    }
 });
